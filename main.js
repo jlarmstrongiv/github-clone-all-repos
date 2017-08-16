@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+'use strict'
 const program = require('commander')
 , path = require('path')
 , fse = require('fse')
@@ -45,7 +45,6 @@ let masterRepoUrls = [];
 
 function requestifyUrlFunc (user, page) {
   let url = 'https://api.github.com/users/' + user + '/repos?page=' + page;
-  // console.log(chalk.blue(url));
   return url;
 }
 
@@ -70,10 +69,8 @@ function getRequestify (repoUrls, requestifyUrl, requestifyOptions) {
     let newRepoUrls = [];
     for (var i = 0; i < body.length; i++) {
       let htmlUrl = body[i].html_url;
-      // console.log(htmlUrl);
       newRepoUrls.push(htmlUrl);
     }
-    // console.log('newRepoUrls.length', newRepoUrls.length);
     if (newRepoUrls.length) {
       console.log('if getRequestify');
       repoUrls = repoUrls.concat(newRepoUrls);
@@ -84,28 +81,10 @@ function getRequestify (repoUrls, requestifyUrl, requestifyOptions) {
     console.log(err);
   });
 }
-// Useless function
-// function getRepoUrls (repoUrls, requestifyUrl, requestifyOptions) {
-//   console.log('start repoUrls');
-//   return getRequestify(repoUrls, requestifyUrl, requestifyOptions).then(function(response){
-//     console.log('then getRepoUrls');
-//     // console.log(response); // logging the correct response
-//     return response; //array of urls
-//   }).catch(function(err) {
-//     console.log('fail getRepoUrls');
-//     console.log(err);
-//   });
-// }
-// function getRepoUrls (repoUrls, requestifyUrl, requestifyOptions) {
-//   console.log(chalk.magenta('start getRepoUrls'));
-//   repoUrls = repoUrls.push(getRequestify(requestifyUrl, requestifyOptions))
-//   return repoUrls;
-// }
 
 function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
   console.log('start concatRepoUrls');
   console.log('user: ' + user + ', page: ' + page);
-  repoLen = repoUrls.length;
   let requestifyUrl = requestifyUrlFunc(user, page);
   return getRequestify(repoUrls, requestifyUrl, requestifyOptions).then(function(response) {
     console.log('then concatRepoUrls');
@@ -126,22 +105,6 @@ function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
     console.log(err);
   })
 }
-// function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
-//   repoLen = repoUrls.length;
-//   let requestifyUrl = requestifyUrlFunc(user, page);
-//   let addRepoUrls = getRepoUrls(repoUrls, requestifyUrl, requestifyOptions);
-//   if (addRepoUrls.length) {
-//     repoUrls = repoUrls.concat(addRepoUrls);
-//   }
-//   if (repoUrls.length > repoLen) {
-//     console.log(chalk.blue('go again'));
-//     page++;
-//     requestifyUrl = requestifyUrlFunc(user, page)
-//     getRepoUrls(repoUrls, requestifyUrl, requestifyOptions);
-//   }
-//   console.log(repoUrls);
-//   return repoUrls;
-// }
 
 function userRepoUrls (user, requestifyOptions) {
   console.log('start userRepoUrls');
@@ -149,6 +112,7 @@ function userRepoUrls (user, requestifyOptions) {
   let repoUrls = [];
   return concatRepoUrls(repoUrls, user, page, requestifyOptions).then(function(response) {
     console.log('then userRepoUrls');
+    console.log(response);
     let userRepoUrls = response;
     return userRepoUrls;
   }).catch(function(err) {
@@ -156,19 +120,12 @@ function userRepoUrls (user, requestifyOptions) {
     console.log(err);
   });
 }
-// function userRepoUrls (user, requestifyOptions) {
-//   let page = 1;
-//   let repoUrls = [];
-//   let oldLen = repoUrls.length;
-//   let userRepoUrls = concatRepoUrls(repoUrls, user, page, requestifyOptions, oldLen)
-//   return userRepoUrls;
-// }
 
 for (var i = 0; i < arrUsers.length; i++) {
   let user = arrUsers[i];
   masterRepoUrls[user] = userRepoUrls(user, requestifyOptions);
 }
-stringMasterRepoUrls = JSON.stringify(masterRepoUrls);
+let stringMasterRepoUrls = JSON.stringify(masterRepoUrls);
 console.log(chalk.red(stringMasterRepoUrls));
 
 // Chalk Example
