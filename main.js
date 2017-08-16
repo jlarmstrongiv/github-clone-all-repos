@@ -208,13 +208,9 @@ function concatRepoUrls (repoUrls, type, instance, page, requestifyOptions) {
       page++;
       requestifyUrl = requestifyUserUrlFunc(instance, page);
       return concatRepoUrls(addRepoUrls, type, instance, page, requestifyOptions);
-    } else if (!(addRepoUrls.length)) {
-      // console.log('no new urls');
-      return repoUrls;
-    }else {
+    } else {
       // console.log('else concatRepoUrls');
-      repoUrls = repoUrls.concat(addRepoUrls);
-      return repoUrls;
+      return addRepoUrls;
     }
   }).catch(function(err) {
     console.log('fail concatRepoUrls');
@@ -364,15 +360,15 @@ function gitCloning (repoUrlsArry, folderPaths) {
       let remotePath = repoUrlsArry[arrName][j];
       let repoName = remotePath.replace(regexpattern, '')
       let localPath = localPathPrefix[i] + '/' + repoName;
-      console.log('mypath', remotePath, localPath)
-      // promises.push(git().silent(true)
-      // .clone(remotePath, localPath) // , [options], [handlerFn]
-      //   .then(() => console.log('mypath', remotePath, localPath))
-      //   .catch((err) => console.error('failed: ', err))
-      // )
+      // console.log('mypath', remotePath, localPath)
+      promises.push(git().silent(true)
+      .clone(remotePath, localPath) // , [options], [handlerFn]
+        .then(() => console.log('finished')) // 'mypath', remotePath, localPath
+        .catch((err) => console.error('failed: ', err))
+      )
     }
   }
-  // return Promise.all(promises);
+  return Promise.all(promises);
 }
 
 // git().silent(false)
@@ -400,7 +396,6 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
       let folderPaths = response[1];
       // console.log('repoUrlsArry', repoUrlsArry);
       // console.log('folderPaths', folderPaths);
-      console.log('gitCloning');
       return gitCloning(repoUrlsArry, folderPaths);
     })
     .then(function(response) {
