@@ -28,19 +28,31 @@ program
   .version('0.0.1')
   .option('-f, --folder', 'Create in folder')
   .option('-u, --user <user>', 'Github username', collect, [])
-  .option('-u, --users <users>', 'Github username list', list)
+  .option('-U, --users <users>', 'Github username list', list)
+  .option('-o, --org <org>', 'Github organization', collect, [])
+  .option('-O, --orgs <orgs>', 'Github organization list', list)
   .option('-t, --token <token>', 'Temporary Github token')
   .option('-T, --Token <Token>', 'Save Github token')
   .parse(process.argv);   // .action(mainFunction); ?
 
-let arrUsers = [];
-if (program.user) {
-  arrUsers = arrUsers.concat(program.user);
+// ==========================
+// User and Org Array Builders
+// ==========================
+
+function arrReposFunc (one, list) {
+  let arrRepos = [];
+  if (one) {
+    arrRepos = arrRepos.concat(one);
+  }
+  if (list) {
+    arrRepos = arrRepos.concat(list)
+  }
+  console.log(chalk.blue(arrRepos));
+  return arrRepos;
 }
-if (program.users) {
-  arrUsers = arrUsers.concat(program.users)
-}
-console.log(chalk.blue(arrUsers));
+let arrUsers = arrReposFunc(program.user, program.users);
+let arrOrgs = arrReposFunc(program.org, program.orgs);
+let arrRepos = arrReposFunc(arrUsers, arrOrgs);
 
 // ==========================
 // Token Verifyer
@@ -80,10 +92,12 @@ function writeTokenFile(token) {
   let tokenObj = {
     token: token
   }
-  jsonfile.writeFileSync(tokenfile, tokenObject, {spaces: 2})
+  jsonfile.writeFileSync(tokenfile, tokenObj, {spaces: 2})
 }
 
 function validateTokens(token, Token) {
+  console.log(chalk.green('Token', Token));
+  console.log(chalk.green('token', token));
   if (token) {
     console.log('if token', token);
     return token;
@@ -92,21 +106,21 @@ function validateTokens(token, Token) {
     writeTokenFile(Token);
     return Token;
   } else if ((program.token) && (program.Token)) {
-    writeTokenFile(Token);
     console.log('if both', Token);
+    writeTokenFile(Token);
     return token;
   } else if (!(program.token) && !(program.Token)) {
     console.log('if none');
     let savedToken = readTokenFile();
+    console.log(savedToken);
     if (savedToken) {
       console.log('if saved', savedToken);
       return savedToken;
     } else {
-      console.log('not saved', );
+      console.log('not saved', savedToken);
       throw 'no token';
     }
   }
-
 }
 // validateTokens(validateToken(program.token), validateToken(program.Token));
 
@@ -128,8 +142,11 @@ function getMasterToken(token, Token) {
 // ==========================
 
 function requestifyUserUrlFunc (user, page) {
-  let url = 'https://api.github.com/users/' + user + '/repos?page=' + page;
-  return url;
+  return 'https://api.github.com/users/' + user + '/repos?page=' + page + '&sort=created'; //perhaps make an option for sorting
+}
+
+function requestifyOrgUrlFunc (org, page) {
+  return 'https://api.github.com/orgs/' + '/repos?page=' + page + '&sort=created';
 }
 
 function requestifyOptionsFunc (token) {
@@ -260,10 +277,10 @@ function checkFolder (originalPath, counter) {
   })
 }
 
-function checkFolders (arrUsers) {
+function checkFolders (arrRepos) {
   let promises = [];
-  for (var i = 0; i < arrUsers.length; i++) {
-    promises.push(checkFolder(arrUsers[i], 0));
+  for (var i = 0; i < arrRepos.length; i++) {
+    promises.push(checkFolder(arrRepos[i], 0));
   }
   return Promise.all(promises).then(function(response){
     // console.log('promiseAll', response);
@@ -299,9 +316,9 @@ function createFolders (arrFolderPath) {
   })
 }
 
-function runCreation (arrUsers) {
-  // console.log('arrUsers', arrUsers);
-  return checkFolders(arrUsers).then(function(arrFolderPath) {
+function createMasterFolders (arrRepos) {
+  // console.log('arrRepos', arrRepos);
+  return checkFolders(arrRepos).then(function(arrFolderPath) {
     // console.log('checkFolders response, ', arrFolderPath);
     return createFolders(arrFolderPath).then(function(arrIsCreated){
       for (var i = 0; i < arrIsCreated.length; i++) {
@@ -310,7 +327,7 @@ function runCreation (arrUsers) {
         }
       }
       console.log(chalk.red('help'));
-      return gitCloning(arrFolderPath, arrUsers);
+      return arrFolderPath;
     });
   }).catch(function(err) {
     console.log();
@@ -325,22 +342,33 @@ function runCreation (arrUsers) {
 // check validity of api token https://stackoverflow.com/questions/22438805/github-api-oauth-token-validation
 // think about implement for rate limiting with ocot https://github.com/pksunkara/octonode or just see if api endpoint exists
 // sort project by last modified date
-
+// add for organization repos
+// gitCloning(arrFolderPath, arrUsers)
 
 function gitCloning (arrFolderPath, arrUsers) {
 
 }
 
-function main(arrUsers, token, Token) {
-  return getMasterToken(token, Token)
-    .then(function(response) {
-      console.log('getMasterRepoUrls');
-      return getMasterRepoUrls(arrUsers, requestifyOptionsFunc(response));
+// ==========================
+// Main
+// ==========================
+
+function main(arrUsers, arrOrgs, arrRepos, token, Token) {
+  return getMasterToken(token, Token) // returns token to use
+    .then(function(token) {
+      let promises = [];
+      console.log(chalk.greenBright(JSON.stringify(requestifyOptionsFunc(token))));
+      promises.push(createMasterFolders(arrRepos));
+      promises.push(getMasterRepoUrls(arrUsers, requestifyOptionsFunc(token)))
+      return Promise.all(promises);
     })
     .then(function(response){
-      console.log('runCreation');
-      // console.log(response);
-      return runCreation(arrUsers);
+      let folderPaths = response[0];
+      let repoUrlsArry = response[1];
+      // console.log('folderPaths', folderPaths);
+      // console.log('repoUrlsArry', repoUrlsArry);
+      console.log('gitCloning');
+      return gitCloning(arrUsers);
     })
     .then(function(response) {
       console.log('end');
@@ -349,42 +377,7 @@ function main(arrUsers, token, Token) {
       console.log(err);
     })
 }
-
-// Nested thens
-// function main(arrUsers, token, Token) {
-//   return getMasterToken(token, Token)
-//     .then(getMasterRepoUrls(arrUsers)
-//       .then(runCreation(arrUsers))
-//         .then(function(response) {
-//           console.log('end');
-//         }))
-//     .catch(function(err) {
-//       console.log('main failed');
-//       console.log(err);
-//     })
-// }
-
-// Before getMasterToken
-// getMasterToken(program.token, program.Token);
-// function main(arrUsers) {
-//   // add tokens
-//   return getMasterRepoUrls(arrUsers).then(function(response){
-//     // console.log(response);
-//     return runCreation(arrUsers);
-//   }).catch(function(err) {
-//     console.log('main failed');
-//     console.log(err);
-//   })
-// }
-main(arrUsers, program.token, program.Token);
-
-
-
-
-// for (let i = 0; i < arrUsers.length; i++) {
-//   let user = arrUsers[i];
-//   masterRepoUrls[user] = userRepoUrls(user, requestifyOptions);
-// }
+main(arrUsers, arrOrgs, arrRepos, program.token, program.Token);
 
 // Chalk Example
 
