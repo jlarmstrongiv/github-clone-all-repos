@@ -7,11 +7,8 @@ const program = require('commander')
 , jsonfile = require('jsonfile')
 , tokenfile = path.join(__dirname, 'token.json')
 , requestify = require('requestify')
-, cmd = require('node-cmd')
 , chalk = require('chalk')
-, fetch = require('node-fetch')
-, simpleGit = require('simple-git')(cwd)
-, log = console.log;
+, git = require('simple-git/promise')
 
 // Commander Functions
 function collect(val, memo) {
@@ -144,7 +141,7 @@ function requestifyUserUrlFunc (user, page) {
 }
 
 function requestifyOrgUrlFunc (org, page) {
-  return 'https://api.github.com/orgs/' + '/repos?page=' + page + '&sort=created';
+  return 'https://api.github.com/orgs/' + org + '/repos?page=' + page + '&sort=created';
 }
 
 function requestifyOptionsFunc (token) {
@@ -188,10 +185,17 @@ function getRequestify (repoUrls, requestifyUrl, requestifyOptions) {
   });
 }
 
-function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
+function concatRepoUrls (repoUrls, type, instance, page, requestifyOptions) {
   // console.log('start concatRepoUrls');
-  // console.log('user: ' + user + ', page: ' + page);
-  let requestifyUrl = requestifyUserUrlFunc(user, page);
+  // console.log('instance: ' + instance + ', page: ' + page);
+  let requestifyUrl;
+  if (type === 'users') {
+    requestifyUrl = requestifyUserUrlFunc(instance, page);
+  } else if (type === 'orgs') {
+    requestifyUrl = requestifyOrgUrlFunc(instance, page);
+  } else {
+    throw 'must specify type'
+  }
   return getRequestify(repoUrls, requestifyUrl, requestifyOptions).then(function(response) {
     // console.log('then concatRepoUrls');
     let addRepoUrls = response;
@@ -199,11 +203,11 @@ function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
     // console.log('repoUrls.length ', repoUrls.length);
     if ((addRepoUrls.length > repoUrls.length) && !(addRepoUrls.length % 30)) {
       // && !(addRepoUrls.length % 30)
-      // ensure it only asks for more if the last request was full, saves 1 request per user
+      // ensure it only asks for more if the last request was full, saves 1 request per instance
       // console.log('recursive getRepoUrls');
       page++;
-      requestifyUrl = requestifyUserUrlFunc(user, page);
-      return concatRepoUrls(addRepoUrls, user, page, requestifyOptions);
+      requestifyUrl = requestifyUserUrlFunc(instance, page);
+      return concatRepoUrls(addRepoUrls, type, instance, page, requestifyOptions);
     } else if (!(addRepoUrls.length)) {
       // console.log('no new urls');
       return repoUrls;
@@ -218,11 +222,11 @@ function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
   })
 }
 
-function repoUrls (user, requestifyOptions) {
+function repoUrls (type, instance, requestifyOptions) {
   // console.log('start repoUrls');
   let page = 1;
   let repoUrls = [];
-  return concatRepoUrls(repoUrls, user, page, requestifyOptions).then(function(repoUrls) {
+  return concatRepoUrls(repoUrls, type, instance, page, requestifyOptions).then(function(repoUrls) {
     // console.log('then repoUrls');
     return repoUrls;
   }).catch(function(err) {
@@ -234,17 +238,17 @@ function repoUrls (user, requestifyOptions) {
 function getMasterRepoUrls (arrUsers, arrOrgs, arrRepos, requestifyOptions) {
   let promises = [];
   for (let i = 0; i < arrUsers.length; i++) {
-    promises.push(repoUrls(arrUsers[i], requestifyOptions))
+    promises.push(repoUrls('users', arrUsers[i], requestifyOptions))
   }
   for (let i = 0; i < arrOrgs.length; i++) {
-    promises.push(repoUrls(arrOrgs[i], requestifyOptions))
+    promises.push(repoUrls('orgs', arrOrgs[i], requestifyOptions))
   }
   return Promise.all(promises).then(function(response) {
     let objRepoUrls = {};
     for (var i = 0; i < arrRepos.length; i++) {
       objRepoUrls[arrRepos[i]] = response[i];
     }
-    console.log('objRepoUrls', objRepoUrls);
+    // console.log('objRepoUrls', objRepoUrls);
     return objRepoUrls;
   }).catch(function(err) {
     console.log('fail promises');
@@ -339,15 +343,44 @@ function createMasterFolders (arrRepos) {
 // ==========================
 
 // clone with oath token https://stackoverflow.com/questions/42148841/github-clone-with-oauth-access-token
-// check validity of api token https://stackoverflow.com/questions/22438805/github-api-oauth-token-validation
 // think about implement for rate limiting with ocot https://github.com/pksunkara/octonode or just see if api endpoint exists
-// sort project by last modified date
-// add for organization repos
 // gitCloning(arrFolderPath, arrUsers)
+// git vs npm ignore
 
-function gitCloning (arrFolderPath, arrUsers) {
-
+function gitCloning (repoUrlsArry, folderPaths) {
+  // console.log(repoUrlsArry);
+  let regexpattern = new RegExp('.*\/');
+  // create in case folder already exists
+  let localPathPrefix = [];
+  for (var i = 0; i < folderPaths.length; i++) {
+    localPathPrefix.push(folderPaths[i].replace(regexpattern, ''))
+  }
+  console.log(localPathPrefix);
+  let promises = [];
+  for (let i = 0, keys = Object.keys(repoUrlsArry); i < keys.length; i++) {
+    console.log(chalk.greenBright(keys[i]));
+    let arrName = keys[i];
+    for (let j = 0; j < repoUrlsArry[arrName].length; j++) {
+      let remotePath = repoUrlsArry[arrName][j];
+      let repoName = remotePath.replace(regexpattern, '')
+      let localPath = localPathPrefix[i] + '/' + repoName;
+      console.log('mypath', remotePath, localPath)
+      // promises.push(git().silent(true)
+      // .clone(remotePath, localPath) // , [options], [handlerFn]
+      //   .then(() => console.log('mypath', remotePath, localPath))
+      //   .catch((err) => console.error('failed: ', err))
+      // )
+    }
+  }
+  // return Promise.all(promises);
 }
+
+// git().silent(false)
+// .clone(remotePath, localPath) // , [options], [handlerFn]
+//   .then(() => console.log('finished'))
+//   .catch((err) => console.error('failed: ', err));
+
+
 
 // ==========================
 // Main
@@ -358,17 +391,17 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
     .then(function(token) {
       let promises = [];
       console.log(chalk.greenBright(JSON.stringify(requestifyOptionsFunc(token))));
-      promises.push(createMasterFolders(arrRepos));
       promises.push(getMasterRepoUrls(arrUsers, arrOrgs, arrRepos, requestifyOptionsFunc(token)))
+      promises.push(createMasterFolders(arrRepos));
       return Promise.all(promises);
     })
     .then(function(response){
-      let folderPaths = response[0];
-      let repoUrlsArry = response[1];
-      // console.log('folderPaths', folderPaths);
+      let repoUrlsArry = response[0];
+      let folderPaths = response[1];
       // console.log('repoUrlsArry', repoUrlsArry);
+      // console.log('folderPaths', folderPaths);
       console.log('gitCloning');
-      return gitCloning(arrUsers);
+      return gitCloning(repoUrlsArry, folderPaths);
     })
     .then(function(response) {
       console.log('end');
@@ -378,6 +411,8 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
     })
 }
 main(arrUsers, arrOrgs, arrRepos, program.token, program.Token);
+
+// npmu node-fetch shelljs git-clone async node-cmd
 
 // Chalk Example
 
