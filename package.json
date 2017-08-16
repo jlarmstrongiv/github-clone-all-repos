@@ -1,5 +1,5 @@
 {
-  "name": "github-clone-all-repos",
+  "name": "gcar",
   "version": "0.1.0",
   "description": "Node command line utility to clone all of a user’s or organization’s repositories",
   "main": "main.js",
