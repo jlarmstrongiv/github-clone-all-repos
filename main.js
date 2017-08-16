@@ -96,8 +96,6 @@ function writeTokenFile(token) {
 }
 
 function validateTokens(token, Token) {
-  console.log(chalk.green('Token', Token));
-  console.log(chalk.green('token', token));
   if (token) {
     console.log('if token', token);
     return token;
@@ -220,31 +218,34 @@ function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
   })
 }
 
-function userRepoUrls (user, requestifyOptions) {
-  // console.log('start userRepoUrls');
+function repoUrls (user, requestifyOptions) {
+  // console.log('start repoUrls');
   let page = 1;
   let repoUrls = [];
-  return concatRepoUrls(repoUrls, user, page, requestifyOptions).then(function(userRepoUrls) {
-    // console.log('then userRepoUrls');
-    return userRepoUrls;
+  return concatRepoUrls(repoUrls, user, page, requestifyOptions).then(function(repoUrls) {
+    // console.log('then repoUrls');
+    return repoUrls;
   }).catch(function(err) {
-    console.log('fail userRepoUrls');
+    console.log('fail repoUrls');
     console.log(err);
   });
 }
 
-function getMasterRepoUrls (arrUsers, requestifyOptions) {
+function getMasterRepoUrls (arrUsers, arrOrgs, arrRepos, requestifyOptions) {
   let promises = [];
   for (let i = 0; i < arrUsers.length; i++) {
-    promises.push(userRepoUrls(arrUsers[i], requestifyOptions))
+    promises.push(repoUrls(arrUsers[i], requestifyOptions))
+  }
+  for (let i = 0; i < arrOrgs.length; i++) {
+    promises.push(repoUrls(arrOrgs[i], requestifyOptions))
   }
   return Promise.all(promises).then(function(response) {
-    let objUserUrls = {};
-    for (var i = 0; i < arrUsers.length; i++) {
-      objUserUrls[arrUsers[i]] = response[i];
+    let objRepoUrls = {};
+    for (var i = 0; i < arrRepos.length; i++) {
+      objRepoUrls[arrRepos[i]] = response[i];
     }
-    // console.log(objUserUrls);
-    return objUserUrls;
+    console.log('objRepoUrls', objRepoUrls);
+    return objRepoUrls;
   }).catch(function(err) {
     console.log('fail promises');
     console.log(err);
@@ -326,7 +327,6 @@ function createMasterFolders (arrRepos) {
           throw 'Error createFolders' //should handle error by gracefully stopping app
         }
       }
-      console.log(chalk.red('help'));
       return arrFolderPath;
     });
   }).catch(function(err) {
@@ -359,7 +359,7 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
       let promises = [];
       console.log(chalk.greenBright(JSON.stringify(requestifyOptionsFunc(token))));
       promises.push(createMasterFolders(arrRepos));
-      promises.push(getMasterRepoUrls(arrUsers, requestifyOptionsFunc(token)))
+      promises.push(getMasterRepoUrls(arrUsers, arrOrgs, arrRepos, requestifyOptionsFunc(token)))
       return Promise.all(promises);
     })
     .then(function(response){
