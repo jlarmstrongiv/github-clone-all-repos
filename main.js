@@ -9,6 +9,7 @@ const program = require('commander')
 , requestify = require('requestify')
 , chalk = require('chalk')
 , git = require('simple-git/promise')
+, status = require('node-status');
 
 // Commander Functions
 function collect(val, memo) {
@@ -44,7 +45,7 @@ function arrReposFunc (one, list) {
   if (list) {
     arrRepos = arrRepos.concat(list)
   }
-  console.log(chalk.blue(arrRepos));
+  // console.log(chalk.blue(arrRepos));
   return arrRepos;
 }
 let arrUsers = arrReposFunc(program.user, program.users);
@@ -62,7 +63,6 @@ let requestifyOptions = requestifyOptionsFunc(token);
 function validateToken(token) {
   let requestifyUrl = 'https://api.github.com'
   let requestifyOptions = requestifyOptionsFunc(token);
-
   return requestify.get(requestifyUrl, requestifyOptions, token).then(function(response) {
     return token;
   }).fail(function(response){
@@ -71,18 +71,23 @@ function validateToken(token) {
     // console.log(response.getCode());
     // console.log(body.message);
     // console.log(body.documentation_url);
-    // muted due to duplication and not necessary an end-all
-    return null; //should handle error by gracefully stopping app
+    // muted as not necessary an end-all
+    return null;
   }).catch(function(err){
     console.log('fail requestifyToken');
     console.log(err);
-    return null; //should handle error by gracefully stopping app
+    // muted as not necessary an end-all
+    return null;
   });
 }
 
 function readTokenFile() {
-  let tokenObj = jsonfile.readFileSync(tokenfile);
-  return tokenObj.token;
+  try {
+    let tokenObj = jsonfile.readFileSync(tokenfile);
+    return tokenObj.token;
+  } catch (err) {
+    return null;
+  }
 }
 
 function writeTokenFile(token) {
@@ -94,26 +99,26 @@ function writeTokenFile(token) {
 
 function validateTokens(token, Token) {
   if (token) {
-    console.log('if token', token);
+    // console.log('if token', token);
     return token;
   } else if (Token) {
-    console.log('if Token', Token);
+    // console.log('if Token', Token);
     writeTokenFile(Token);
     return Token;
   } else if ((program.token) && (program.Token)) {
-    console.log('if both', Token);
+    // console.log('if both', Token);
     writeTokenFile(Token);
     return token;
   } else if (!(program.token) && !(program.Token)) {
-    console.log('if none');
+    // console.log('if none');
     let savedToken = readTokenFile();
-    console.log(savedToken);
+    // console.log(savedToken);
     if (savedToken) {
-      console.log('if saved', savedToken);
+      // console.log('if saved', savedToken);
       return savedToken;
     } else {
-      console.log('not saved', savedToken);
-      throw 'no token';
+      // console.log('not saved', savedToken);
+      return null;
     }
   }
 }
@@ -251,6 +256,7 @@ function getMasterRepoUrls (arrUsers, arrOrgs, arrRepos, requestifyOptions) {
     console.log(err);
   })
 }
+
 // ==========================
 // Folder Checker and Creator
 // ==========================
@@ -338,11 +344,6 @@ function createMasterFolders (arrRepos) {
 // Git Cloning
 // ==========================
 
-// clone with oath token https://stackoverflow.com/questions/42148841/github-clone-with-oauth-access-token
-// think about implement for rate limiting with ocot https://github.com/pksunkara/octonode or just see if api endpoint exists
-// gitCloning(arrFolderPath, arrUsers)
-// git vs npm ignore
-
 function gitCloning (repoUrlsArry, folderPaths) {
   // console.log(repoUrlsArry);
   let regexpattern = new RegExp('.*\/');
@@ -351,10 +352,27 @@ function gitCloning (repoUrlsArry, folderPaths) {
   for (var i = 0; i < folderPaths.length; i++) {
     localPathPrefix.push(folderPaths[i].replace(regexpattern, ''))
   }
-  console.log(localPathPrefix);
+  // console.log(localPathPrefix);
   let promises = [];
+
+  let totalClones = 0;
   for (let i = 0, keys = Object.keys(repoUrlsArry); i < keys.length; i++) {
-    console.log(chalk.greenBright(keys[i]));
+    for (let j = 0; j < repoUrlsArry[keys[i]].length; j++) {
+      totalClones++
+    }
+  }
+  let clones = status.addItem('clone', {
+    max: totalClones
+  })
+  let pattern = 'Status @ {uptime} {clone.bar} {clone} repositories cloned'
+  status.start({
+    pattern: pattern
+  })
+  // 'Status @ {uptime} | {spinner} | {clone} | {clone.bar}'
+  // pattern: 'Status @ {uptime} {spinner} {clone} Repo(s) cloned'
+
+  for (let i = 0, keys = Object.keys(repoUrlsArry); i < keys.length; i++) {
+    // console.log(chalk.greenBright(keys[i]));
     let arrName = keys[i];
     for (let j = 0; j < repoUrlsArry[arrName].length; j++) {
       let remotePath = repoUrlsArry[arrName][j];
@@ -363,30 +381,35 @@ function gitCloning (repoUrlsArry, folderPaths) {
       // console.log('mypath', remotePath, localPath)
       promises.push(git().silent(true)
       .clone(remotePath, localPath) // , [options], [handlerFn]
-        .then(() => console.log('finished')) // 'mypath', remotePath, localPath
+        .then(() => clones.inc()) // 'mypath', remotePath, localPath
         .catch((err) => console.error('failed: ', err))
       )
     }
   }
-  return Promise.all(promises);
+  return Promise.all(promises).then(function(response){
+    // console.log(chalk.red('help'));
+    return clones.doneStep();
+  });
 }
-
-// git().silent(false)
-// .clone(remotePath, localPath) // , [options], [handlerFn]
-//   .then(() => console.log('finished'))
-//   .catch((err) => console.error('failed: ', err));
-
-
 
 // ==========================
 // Main
 // ==========================
+// clone with oath token https://stackoverflow.com/questions/42148841/github-clone-with-oauth-access-token
+// think about implement for rate limiting with ocot https://github.com/pksunkara/octonode or just see if api endpoint exists
+// gitCloning(arrFolderPath, arrUsers)
+// git vs npm ignore
+// add loading bar https://github.com/derrickpelletier/node-status
 
 function main(arrUsers, arrOrgs, arrRepos, token, Token) {
   return getMasterToken(token, Token) // returns token to use
     .then(function(token) {
+      if (!token) {
+        throw new Error('Yolo');
+      }
       let promises = [];
-      console.log(chalk.greenBright(JSON.stringify(requestifyOptionsFunc(token))));
+      console.log('Querying Github…');
+      // console.log(chalk.greenBright(JSON.stringify(requestifyOptionsFunc(token))));
       promises.push(getMasterRepoUrls(arrUsers, arrOrgs, arrRepos, requestifyOptionsFunc(token)))
       promises.push(createMasterFolders(arrRepos));
       return Promise.all(promises);
@@ -399,14 +422,23 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
       return gitCloning(repoUrlsArry, folderPaths);
     })
     .then(function(response) {
-      console.log('end');
+      // console.log('end');
+      return process.exit();
     }).catch(function(err) {
-      console.log('main failed');
-      console.log(err);
+      if (err.message == 'Yolo') {
+        console.log('Please specify or save a personal Github token:');
+        console.log(' · use the -t flag to use a token once');
+        console.log(' · use the -T flag to save a token for future use');
+        console.log(' · create the token.json file to keep your bash history clear');
+        console.log('Documentation available here:  www.link.com');
+        return process.exit();
+      } else {
+        console.log('main failed');
+        console.log(err);
+      }
     })
 }
 main(arrUsers, arrOrgs, arrRepos, program.token, program.Token);
-
 // npmu node-fetch shelljs git-clone async node-cmd
 
 // Chalk Example
