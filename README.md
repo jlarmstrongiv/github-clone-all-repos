@@ -7,7 +7,7 @@
 Node command line utility to clone all of a user’s or organization’s repositories.
 
 ## Why?
-Even though it may not seem as necessary with Github, it would be nice to have a backup tool for all one’s repositories (without having to clone each one individually).
+Even though it may not seem as necessary with Github, it would be nice to have a backup tool for all of one’s repositories (without having to clone each one individually).
 
 ## Installation
 You must have node installed.  
