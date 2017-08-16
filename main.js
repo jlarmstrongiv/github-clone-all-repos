@@ -178,11 +178,11 @@ function getRequestify (repoUrls, requestifyUrl, requestifyOptions) {
     }
     return repoUrls;
   }).fail(function(response) {
-    let body = response.getBody();
-    console.log(requestifyUrl);
-    console.log(response.getCode());
-    console.log(body.message);
-    console.log(body.documentation_url);
+    // let body = response.getBody();
+    // console.log(requestifyUrl);
+    // console.log(response.getCode());
+    // console.log(body.message);
+    // console.log(body.documentation_url);
     return repoUrls;
   }).catch(function(err) {
     console.log('fail getRequestify');
@@ -357,6 +357,9 @@ function gitCloning (repoUrlsArry, folderPaths) {
 
   let totalClones = 0;
   for (let i = 0, keys = Object.keys(repoUrlsArry); i < keys.length; i++) {
+    if (!(repoUrlsArry[keys[i]].length)) {
+      console.log(' · Unable to find any repositories for ' + keys[i]);
+    }
     for (let j = 0; j < repoUrlsArry[keys[i]].length; j++) {
       totalClones++
     }
@@ -395,11 +398,6 @@ function gitCloning (repoUrlsArry, folderPaths) {
 // ==========================
 // Main
 // ==========================
-// clone with oath token https://stackoverflow.com/questions/42148841/github-clone-with-oauth-access-token
-// think about implement for rate limiting with ocot https://github.com/pksunkara/octonode or just see if api endpoint exists
-// gitCloning(arrFolderPath, arrUsers)
-// git vs npm ignore
-// add loading bar https://github.com/derrickpelletier/node-status
 
 function main(arrUsers, arrOrgs, arrRepos, token, Token) {
   return getMasterToken(token, Token) // returns token to use
@@ -407,8 +405,8 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
       if (!token) {
         throw new Error('Yolo');
       }
-      let promises = [];
       console.log('Querying Github…');
+      let promises = [];
       // console.log(chalk.greenBright(JSON.stringify(requestifyOptionsFunc(token))));
       promises.push(getMasterRepoUrls(arrUsers, arrOrgs, arrRepos, requestifyOptionsFunc(token)))
       promises.push(createMasterFolders(arrRepos));
@@ -429,8 +427,8 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
         console.log('Please specify or save a personal Github token:');
         console.log(' · use the -t flag to use a token once');
         console.log(' · use the -T flag to save a token for future use');
-        console.log(' · create the token.json file to keep your bash history clear');
-        console.log('Documentation available here:  www.link.com');
+        console.log(' · create a token.json file to keep your bash history clear');
+        console.log('Documentation available at:  www.link.com');
         return process.exit();
       } else {
         console.log('main failed');
@@ -438,21 +436,12 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
       }
     })
 }
+console.log('');
 main(arrUsers, arrOrgs, arrRepos, program.token, program.Token);
+
+// ==========================
+// References for Later
+// ==========================
 // npmu node-fetch shelljs git-clone async node-cmd
-
-// Chalk Example
-
-// log(`
-//   user: {red ${chalk.red(program.user)}}
-//   folder: {blue ${program.folder}}
-//   users: {green ${program.users}}
-// `);
-
-// log(program.user);
-// log(program.folder);
-// log(program.users);
-// console.log(memo.length);
-
-var url = 'https://api.github.com/users/tkbell51/repos?page=1';
-// requestify.get('')
+// clone with oath token https://stackoverflow.com/questions/42148841/github-clone-with-oauth-access-token
+// git vs npm ignore

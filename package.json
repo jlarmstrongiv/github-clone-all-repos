@@ -1,10 +1,11 @@
 {
-  "name": "github-user-all-repos",
-  "version": "0.0.13",
-  "description": "Command Line Utility to clone of a user’s repos into a folder.",
+  "name": "github-clone-all-repos",
+  "version": "0.1.0",
+  "description": "Node command line utility to clone all of a user’s or organization’s repositories",
   "main": "main.js",
   "bin": {
-    "guar": "./main.js"
+    "gcar": "./main.js",
+    "github-clone-all-repos": "./main.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -16,7 +17,7 @@
     "Github"
   ],
   "author": "John Armstrong",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE.TXT",
   "dependencies": {
     "chalk": "^2.1.0",
     "commander": "^2.11.0",
