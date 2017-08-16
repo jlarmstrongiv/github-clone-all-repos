@@ -61,36 +61,41 @@ function requestifyOptionsFunc (token) {
   return requestifyOptions;
 }
 
-function getRequestify (requestifyUrl, requestifyOptions) {
+function getRequestify (repoUrls, requestifyUrl, requestifyOptions) {
   console.log('start getRequestify');
-  return requestify.get(requestifyUrl, requestifyOptions)
+  return requestify.get(requestifyUrl, requestifyOptions, repoUrls)
   .then(function(response) {
     console.log('then getRequestify');
     let body = response.getBody();
     let newRepoUrls = [];
     for (var i = 0; i < body.length; i++) {
       let htmlUrl = body[i].html_url;
-      console.log(htmlUrl);
+      // console.log(htmlUrl);
       newRepoUrls.push(htmlUrl);
     }
-    return newRepoUrls;
+    // console.log('newRepoUrls.length', newRepoUrls.length);
+    if (newRepoUrls.length) {
+      console.log('if getRequestify');
+      repoUrls = repoUrls.concat(newRepoUrls);
+    }
+    return repoUrls;
   }).catch(function(err) {
     console.log('fail getRequestify');
     console.log(err);
   });
 }
-
-function getRepoUrls (repoUrls, requestifyUrl, requestifyOptions) {
-  console.log('start repoUrls');
-  return getRequestify(requestifyUrl, requestifyOptions).then(function(response){
-    repoUrls.push(response);
-    console.log('then getRepoUrls');
-    return repoUrls;
-  }).catch(function(err) {
-    console.log('fail getRepoUrls');
-    console.log(err);
-  });
-}
+// Useless function
+// function getRepoUrls (repoUrls, requestifyUrl, requestifyOptions) {
+//   console.log('start repoUrls');
+//   return getRequestify(repoUrls, requestifyUrl, requestifyOptions).then(function(response){
+//     console.log('then getRepoUrls');
+//     // console.log(response); // logging the correct response
+//     return response; //array of urls
+//   }).catch(function(err) {
+//     console.log('fail getRepoUrls');
+//     console.log(err);
+//   });
+// }
 // function getRepoUrls (repoUrls, requestifyUrl, requestifyOptions) {
 //   console.log(chalk.magenta('start getRepoUrls'));
 //   repoUrls = repoUrls.push(getRequestify(requestifyUrl, requestifyOptions))
@@ -99,21 +104,23 @@ function getRepoUrls (repoUrls, requestifyUrl, requestifyOptions) {
 
 function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
   console.log('start concatRepoUrls');
+  console.log('user: ' + user + ', page: ' + page);
   repoLen = repoUrls.length;
   let requestifyUrl = requestifyUrlFunc(user, page);
-  return getRepoUrls(repoUrls, requestifyUrl, requestifyOptions).then(function(response) {
+  return getRequestify(repoUrls, requestifyUrl, requestifyOptions).then(function(response) {
     console.log('then concatRepoUrls');
     let addRepoUrls = response;
-    console.log(addRepoUrls.length);
-    if (addRepoUrls.length) {
+    console.log('addRepoUrls.length ', addRepoUrls.length);
+    console.log('repoUrls.length ', repoUrls.length);
+    if (addRepoUrls.length > repoUrls.length) {
       console.log('recursive getRepoUrls');
-      repoUrls.concat(addRepoUrls);
       page++;
-      console.log('user: ' + user + ', page: ' + page);
       requestifyUrl = requestifyUrlFunc(user, page);
-      return getRepoUrls(repoUrls, requestifyUrl, requestifyOptions);
+      return concatRepoUrls(addRepoUrls, user, page, requestifyOptions);
+    } else {
+      console.log('else concatRepoUrls');
+      return repoUrls;
     }
-    return repoUrls;
   }).catch(function(err) {
     console.log('fail concatRepoUrls');
     console.log(err);
@@ -143,7 +150,6 @@ function userRepoUrls (user, requestifyOptions) {
   return concatRepoUrls(repoUrls, user, page, requestifyOptions).then(function(response) {
     console.log('then userRepoUrls');
     let userRepoUrls = response;
-    console.log(response); //broken here
     return userRepoUrls;
   }).catch(function(err) {
     console.log('fail userRepoUrls');
@@ -162,10 +168,9 @@ for (var i = 0; i < arrUsers.length; i++) {
   let user = arrUsers[i];
   masterRepoUrls[user] = userRepoUrls(user, requestifyOptions);
 }
+stringMasterRepoUrls = JSON.stringify(masterRepoUrls);
+console.log(chalk.red(stringMasterRepoUrls));
 
-console.log('nope', masterRepoUrls.jlarmstrongiv[0]);
-var really = JSON.stringify(masterRepoUrls);
-console.log(really);
 // Chalk Example
 
 // log(`
@@ -173,8 +178,6 @@ console.log(really);
 //   folder: {blue ${program.folder}}
 //   users: {green ${program.users}}
 // `);
-
-console.log('hi');
 
 // log(program.user);
 // log(program.folder);
