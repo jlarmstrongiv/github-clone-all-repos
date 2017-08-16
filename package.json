@@ -1,6 +1,6 @@
 {
   "name": "github-user-all-repos",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Command Line Utility to clone of a user’s repos into a folder.",
   "main": "main.js",
   "bin": {
