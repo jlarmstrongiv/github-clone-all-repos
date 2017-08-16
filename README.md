@@ -7,10 +7,11 @@
 Node command line utility to clone all of a user’s or organization’s repositories.
 
 ## Why?
-Even though it may not seem as necessary with Github, it would be nice to have a backup tool for all of one’s repositories (without having to clone each one individually).
+Even though it may not seem as necessary with Github, it would be nice to have a backup tool for all of one’s repositories (without having to clone each repository individually).
 
 ## Installation
 You must have node installed.  
+
 Run `$ npm install gcar -g`.
 
 ## How To
@@ -41,15 +42,19 @@ These tokens can be generated at [https://github.com/settings/tokens](https://gi
 *(The Personal Github Token used in the examples is not valid…)*
 
 Clone a single user, without saving the token:
+
 `gcar -u nick70 -t 4a68631afb82bala9f9c49892e0e3c82eaa7ef66`
 
 Clone multple users, and save the token for later use:
+
 `gcar -U BraxtonHath,nick70 -T 4a68631afb82bala9f9c49892e0e3c82eaa7ef66`
 
 Clone a single org:
+
 `gcar -o tiy-greenville-summer-2017`
 
 Mix-and-match multiple flags:
+
 `gcar -o tiy-greenville-summer-2017 -U BraxtonHath,nick70 -u jennbowers`
 
 ## Notes
