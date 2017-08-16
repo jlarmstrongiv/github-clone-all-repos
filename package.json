@@ -1,0 +1,29 @@
+{
+  "name": "github-user-all-repos",
+  "version": "0.0.2",
+  "description": "Command Line Utility to clone of a user’s repos into a folder.",
+  "main": "main.js",
+  "bin": {
+    "guar": "./main.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Node",
+    "JS",
+    "Commander",
+    "Github"
+  ],
+  "author": "John Armstrong",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "async": "^2.5.0",
+    "chalk": "^2.1.0",
+    "commander": "^2.11.0",
+    "fse": "^3.0.0",
+    "node-cmd": "^3.0.0",
+    "node-fetch": "^1.7.2",
+    "requestify": "^0.2.5"
+  }
+}
