@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 'use strict'
+const cwd = process.cwd();
 const program = require('commander')
 , path = require('path')
-, fse = require('fse')
+, fse = require('fs-extra')
 , requestify = require('requestify')
 , cmd = require('node-cmd')
 , chalk = require('chalk')
 , fetch = require('node-fetch')
+, simpleGit = require('simple-git')(cwd)
 , log = console.log;
 
 // Commander Functions
@@ -41,7 +43,9 @@ let token = 'cd998afc37e5104e2e1323343bd4cfd212e2887d';
 let requestifyOptions = requestifyOptionsFunc(token);
 // let requestifyOptions = requestifyOptionsFunc();
 
-let masterRepoUrls = [];
+// ==========================
+// JSON Builder
+// ==========================
 
 function requestifyUrlFunc (user, page) {
   let url = 'https://api.github.com/users/' + user + '/repos?page=' + page;
@@ -61,10 +65,10 @@ function requestifyOptionsFunc (token) {
 }
 
 function getRequestify (repoUrls, requestifyUrl, requestifyOptions) {
-  console.log('start getRequestify');
+  // console.log('start getRequestify');
   return requestify.get(requestifyUrl, requestifyOptions, repoUrls)
   .then(function(response) {
-    console.log('then getRequestify');
+    // console.log('then getRequestify');
     let body = response.getBody();
     let newRepoUrls = [];
     for (var i = 0; i < body.length; i++) {
@@ -72,9 +76,16 @@ function getRequestify (repoUrls, requestifyUrl, requestifyOptions) {
       newRepoUrls.push(htmlUrl);
     }
     if (newRepoUrls.length) {
-      console.log('if getRequestify');
+      // console.log('if getRequestify');
       repoUrls = repoUrls.concat(newRepoUrls);
     }
+    return repoUrls;
+  }).fail(function(response) {
+    let body = response.getBody();
+    console.log(requestifyUrl);
+    console.log(response.getCode());
+    console.log(body.message);
+    console.log(body.documentation_url);
     return repoUrls;
   }).catch(function(err) {
     console.log('fail getRequestify');
@@ -83,21 +94,22 @@ function getRequestify (repoUrls, requestifyUrl, requestifyOptions) {
 }
 
 function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
-  console.log('start concatRepoUrls');
-  console.log('user: ' + user + ', page: ' + page);
+  // console.log('start concatRepoUrls');
+  // console.log('user: ' + user + ', page: ' + page);
   let requestifyUrl = requestifyUrlFunc(user, page);
   return getRequestify(repoUrls, requestifyUrl, requestifyOptions).then(function(response) {
-    console.log('then concatRepoUrls');
+    // console.log('then concatRepoUrls');
     let addRepoUrls = response;
-    console.log('addRepoUrls.length ', addRepoUrls.length);
-    console.log('repoUrls.length ', repoUrls.length);
-    if (addRepoUrls.length > repoUrls.length) {
-      console.log('recursive getRepoUrls');
+    // console.log('addRepoUrls.length ', addRepoUrls.length);
+    // console.log('repoUrls.length ', repoUrls.length);
+    if (addRepoUrls.length > repoUrls.length && !(addRepoUrls.length % 30)) {
+      //ensure it only asks for more if the last request was full, saves 1 request per user
+      // console.log('recursive getRepoUrls');
       page++;
       requestifyUrl = requestifyUrlFunc(user, page);
       return concatRepoUrls(addRepoUrls, user, page, requestifyOptions);
     } else {
-      console.log('else concatRepoUrls');
+      // console.log('else concatRepoUrls');
       return repoUrls;
     }
   }).catch(function(err) {
@@ -107,13 +119,11 @@ function concatRepoUrls (repoUrls, user, page, requestifyOptions) {
 }
 
 function userRepoUrls (user, requestifyOptions) {
-  console.log('start userRepoUrls');
+  // console.log('start userRepoUrls');
   let page = 1;
   let repoUrls = [];
-  return concatRepoUrls(repoUrls, user, page, requestifyOptions).then(function(response) {
-    console.log('then userRepoUrls');
-    // console.log(response);
-    let userRepoUrls = response;
+  return concatRepoUrls(repoUrls, user, page, requestifyOptions).then(function(userRepoUrls) {
+    // console.log('then userRepoUrls');
     return userRepoUrls;
   }).catch(function(err) {
     console.log('fail userRepoUrls');
@@ -121,27 +131,127 @@ function userRepoUrls (user, requestifyOptions) {
   });
 }
 
-function getMasterRepoUrls(arrUsers) {
+function getMasterRepoUrls (arrUsers) {
   let promises = [];
   for (let i = 0; i < arrUsers.length; i++) {
     promises.push(userRepoUrls(arrUsers[i], requestifyOptions))
   }
   return Promise.all(promises).then(function(response) {
-    console.log('results ', response);
-    console.log(arrUsers);
     let objUserUrls = {};
     for (var i = 0; i < arrUsers.length; i++) {
       objUserUrls[arrUsers[i]] = response[i];
     }
-    let stringObjUserUrls = JSON.stringify(objUserUrls);
-    console.log(stringObjUserUrls);
     return objUserUrls;
   }).catch(function(err) {
     console.log('fail promises');
     console.log(err);
   })
 }
-getMasterRepoUrls(arrUsers);
+// ==========================
+// Folder and File Creation
+// ==========================
+
+function checkFolder (originalPath, counter) {
+  let path;
+  if (counter) {
+    path = cwd + '/' + originalPath + '-' + counter;
+    console.log('checkPath', path);
+  } else {
+    path = cwd + '/' + originalPath;
+    console.log('checkPath', path);
+  }
+  return fse.pathExists(path).then(function(response){
+    console.log('checkPath', response);
+    if (response) {
+      counter++
+      console.log('checkCounter', counter);
+      return checkFolder(originalPath, counter);
+    }
+    return path;
+  }).catch(function(err){
+    console.log('fail checkFolder');
+    console.log(err);
+  })
+}
+
+function checkFolders (arrUsers) {
+  let promises = [];
+  for (var i = 0; i < arrUsers.length; i++) {
+    promises.push(checkFolder(arrUsers[i], 0));
+  }
+  return Promise.all(promises).then(function(response){
+    console.log('promiseAll', response);
+    return response;
+  }).catch(function(err){
+    console.log('fail checkFolders');
+    console.log(err);
+  })
+}
+
+function createFolder (folderPath) {
+  console.log('start createFolder');
+  return fse.ensureDir(folderPath).then(function(){
+    return true;
+  }).catch(function(err){
+    console.log('fail createFolder');
+    console.log(err);
+  })
+}
+
+function createFolders (arrFolderPath) {
+  console.log('start createFolders');
+  let promises = [];
+  for (var i = 0; i < arrFolderPath.length; i++) {
+    promises.push(createFolder(arrFolderPath[i]));
+  }
+  return Promise.all(promises).then(function(response){
+    console.log('createFolders response', response);
+    return response; // remove then entirely? 
+  }).catch(function(err){
+    console.log('fail createFolders');
+    console.log(err);
+  })
+}
+
+// clone with oath token https://stackoverflow.com/questions/42148841/github-clone-with-oauth-access-token
+// check validity of api token https://stackoverflow.com/questions/22438805/github-api-oauth-token-validation
+// think about implement for rate limiting with ocot https://github.com/pksunkara/octonode or just see if api endpoint exists
+// sort project by last modified date
+function gitCloning (arrFolderPath, arrUsers) {
+
+}
+
+function runCreation (arrUsers) {
+  console.log('arrUsers', arrUsers);
+  return checkFolders(arrUsers).then(function(arrFolderPath) {
+    console.log('checkFolders response, ', arrFolderPath);
+    return createFolders(arrFolderPath).then(function(arrIsCreated){
+      for (var i = 0; i < arrIsCreated.length; i++) {
+        if (!arrIsCreated[i]) {
+          throw 'Error createFolders'
+        }
+      }
+      console.log(chalk.red('help'));
+      return gitCloning(arrFolderPath, arrUsers);
+    });
+  }).catch(function(err) {
+    console.log();
+  });
+}
+
+function main(arrUsers) {
+  return getMasterRepoUrls(arrUsers).then(function(response){
+    // console.log(response);
+    return runCreation(arrUsers);
+  }).catch(function(err) {
+    console.log('main failed');
+    console.log(err);
+  })
+}
+main(arrUsers);
+
+
+
 
 // for (let i = 0; i < arrUsers.length; i++) {
 //   let user = arrUsers[i];
