@@ -49,7 +49,7 @@ Clone multple users, and save the token for later use:
 
 `gcar -U BraxtonHath,nick70 -T 4a68631afb82bala9f9c49892e0e3c82eaa7ef66`
 
-Clone a single org:
+Clone a single organization:
 
 `gcar -o tiy-greenville-summer-2017`
 
