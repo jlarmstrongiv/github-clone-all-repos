@@ -45,17 +45,21 @@ Clone a single user, without saving the token:
 
 `gcar -u nick70 -t 4a68631afb82bala9f9c49892e0e3c82eaa7ef66`
 
+
 Clone multple users, and save the token for later use:
 
 `gcar -U BraxtonHath,nick70 -T 4a68631afb82bala9f9c49892e0e3c82eaa7ef66`
+
 
 Clone a single organization:
 
 `gcar -o tiy-greenville-summer-2017`
 
+
 Mix-and-match multiple flags:
 
 `gcar -o tiy-greenville-summer-2017 -U BraxtonHath,nick70 -u jennbowers`
+
 
 ## Notes
 If you would like to contribute, see the TODO.md document.  Pull requests are welcome!
