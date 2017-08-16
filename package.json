@@ -1,6 +1,6 @@
 {
   "name": "gcar",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Node command line utility to clone all of a user’s or organization’s repositories",
   "main": "main.js",
   "bin": {
@@ -17,7 +17,15 @@
     "Github"
   ],
   "author": "John Armstrong",
-  "license": "SEE LICENSE IN LICENSE.TXT",
+  "license": "MIT",
+  "repository" : { 
+    "type" : "git",
+    "url" : "https://github.com/jlarmstrongiv/github-clone-all-repos"
+  },
+  "bugs": { 
+    "url" : "https://github.com/jlarmstrongiv/github-clone-all-repos/issues",
+    "email" : "jlarmst@g.clemson.edu"
+  },
   "dependencies": {
     "chalk": "^2.1.0",
     "commander": "^2.11.0",
