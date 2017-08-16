@@ -112,7 +112,7 @@ function userRepoUrls (user, requestifyOptions) {
   let repoUrls = [];
   return concatRepoUrls(repoUrls, user, page, requestifyOptions).then(function(response) {
     console.log('then userRepoUrls');
-    console.log(response);
+    // console.log(response);
     let userRepoUrls = response;
     return userRepoUrls;
   }).catch(function(err) {
@@ -121,12 +121,32 @@ function userRepoUrls (user, requestifyOptions) {
   });
 }
 
-for (var i = 0; i < arrUsers.length; i++) {
-  let user = arrUsers[i];
-  masterRepoUrls[user] = userRepoUrls(user, requestifyOptions);
+function getMasterRepoUrls(arrUsers) {
+  let promises = [];
+  for (let i = 0; i < arrUsers.length; i++) {
+    promises.push(userRepoUrls(arrUsers[i], requestifyOptions))
+  }
+  return Promise.all(promises).then(function(response) {
+    console.log('results ', response);
+    console.log(arrUsers);
+    let objUserUrls = {};
+    for (var i = 0; i < arrUsers.length; i++) {
+      objUserUrls[arrUsers[i]] = response[i];
+    }
+    let stringObjUserUrls = JSON.stringify(objUserUrls);
+    console.log(stringObjUserUrls);
+    return objUserUrls;
+  }).catch(function(err) {
+    console.log('fail promises');
+    console.log(err);
+  })
 }
-let stringMasterRepoUrls = JSON.stringify(masterRepoUrls);
-console.log(chalk.red(stringMasterRepoUrls));
+getMasterRepoUrls(arrUsers);
+
+// for (let i = 0; i < arrUsers.length; i++) {
+//   let user = arrUsers[i];
+//   masterRepoUrls[user] = userRepoUrls(user, requestifyOptions);
+// }
 
 // Chalk Example
 
