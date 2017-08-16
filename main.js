@@ -428,7 +428,7 @@ function main(arrUsers, arrOrgs, arrRepos, token, Token) {
         console.log(' · use the -t flag to use a token once');
         console.log(' · use the -T flag to save a token for future use');
         console.log(' · create a token.json file to keep your bash history clear');
-        console.log('Documentation available at:  www.link.com');
+        console.log('Documentation available at:  https://github.com/jlarmstrongiv/github-clone-all-repos');
         return process.exit();
       } else {
         console.log('main failed');
